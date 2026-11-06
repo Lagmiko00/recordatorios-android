@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Recordatorios</string>
+    <string name="filtro_estado">Estado</string>
+    <string name="filtro_prioridad">Prioridad</string>
+    <string name="todos">Todos</string>
+    <string name="todas">Todas</string>
+    <string name="categoria">Categoría: %1$s</string>
+    <string name="prioridad">Prioridad: %1$s</string>
+    <string name="estado">Estado: %1$s</string>
+    <string name="sin_descripcion">Sin descripción</string>
+    <string name="categorias">Categorías: %1$s</string>
+    <string name="cantidad">%1$d de %2$d recordatorios</string>
+    <string name="sin_resultados">No hay recordatorios con estos filtros.</string>
+    <string name="lista_vacia">Todavía no hay recordatorios.</string>
+    <string name="restablecer">Restablecer filtros</string>
+    <string name="cargando">Cargando recordatorios</string>
+    <string name="error">No se pudieron mostrar los recordatorios: %1$s</string>
+</resources>
