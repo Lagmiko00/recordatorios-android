@@ -1,66 +1,141 @@
 package cl.curso.recordatorios
 
+import android.content.Intent
 import android.graphics.Bitmap
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso.closeSoftKeyboard
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import java.io.File
 
 class PantallaRecordatoriosTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @get:Rule val compose = createEmptyComposeRule()
+    private lateinit var activity: ActivityScenario<MainActivity>
 
-    @Test fun pantallaInicialMuestraDatosYCategoriaSinDuplicados() {
-        compose.onNodeWithText("6 de 6 recordatorios").assertIsDisplayed()
-        compose.onNodeWithText("Preparar examen").assertIsDisplayed()
-        compose.onNodeWithText("Categorías: Estudio, Personal, Trabajo").assertIsDisplayed()
-        capturar("01_pantalla_inicial.png")
+    @After fun cerrar() {
+        if (::activity.isInitialized) activity.close()
     }
 
-    @Test fun prioridadAltaMuestraDosPendientes() {
-        seleccionar("filtro_prioridad", "Alta")
-        compose.onNodeWithText("2 de 6 recordatorios").assertIsDisplayed()
-        compose.onNodeWithText("Preparar examen").assertIsDisplayed()
-        capturar("04_filtro_alta.png")
+    @Test fun listadoDetalleYRegreso() {
+        abrir()
+        esperar("6 de 6 recordatorios")
+        capturar("01_listado.png")
+        compose.onNodeWithTag("recordatorio_1").performClick()
+        esperar("Repasar los temas de la próxima evaluación.")
+        compose.onNodeWithText("Recordatorio n.º 1").assertIsDisplayed()
+        capturar("03_detalle.png")
+        compose.onNodeWithText("Volver").performClick()
+        esperar("6 de 6 recordatorios")
     }
 
-    @Test fun combinacionSinResultadosPermiteRestablecer() {
-        seleccionar("filtro_estado", "Completado")
-        seleccionar("filtro_prioridad", "Alta")
-        compose.onNodeWithText("0 de 6 recordatorios").assertIsDisplayed()
-        compose.onNodeWithText("No hay recordatorios con estos filtros.").assertIsDisplayed()
-        capturar("05_sin_resultados.png")
-        compose.onNodeWithTag("restablecer").performClick()
-        compose.onNodeWithText("6 de 6 recordatorios").assertIsDisplayed()
+    @Test fun validarFormularioGuardarYConsultarNuevoRegistro() {
+        abrir()
+        formulario()
+        compose.onNodeWithTag("guardar").assertIsNotEnabled()
+        compose.onNodeWithTag("titulo").performTextInput("  abc  ")
+        compose.onNodeWithText("Escribe al menos 4 caracteres.").assertExists()
+        compose.onNodeWithTag("titulo").performTextReplacement("  Revisar calendario  ")
+        compose.onNodeWithTag("descripcion").performTextInput("a".repeat(201))
+        compose.onNodeWithText("La descripción admite hasta 200 caracteres.").assertExists()
+        compose.onNodeWithTag("guardar").assertIsNotEnabled()
+        compose.onNodeWithTag("descripcion").performTextReplacement("Confirmar las fechas de las reuniones.")
+        closeSoftKeyboard()
+        compose.onNodeWithTag("guardar").assertIsNotEnabled()
+        elegir("categoria", "Trabajo")
+        compose.onNodeWithTag("guardar").assertIsNotEnabled()
+        elegir("prioridad", "Media")
+        compose.onNodeWithTag("guardar").assertIsEnabled()
+        capturar("02_formulario.png")
+        compose.onNodeWithTag("guardar").performClick()
+        compose.onNodeWithTag("guardar").assertIsNotEnabled()
+        compose.onNodeWithText("Guardando…").assertIsDisplayed()
+        capturar("08_guardando.png")
+        esperar("7 de 7 recordatorios")
+        compose.onNodeWithTag("recordatorio_7").performClick()
+        esperar("Confirmar las fechas de las reuniones.")
+        compose.onNodeWithText("Revisar calendario").assertIsDisplayed()
     }
 
-    @Test fun estadoCompletadoMuestraDosElementos() {
-        seleccionar("filtro_estado", "Completado")
-        compose.onNodeWithText("2 de 6 recordatorios").assertIsDisplayed()
-        compose.onNodeWithText("Leer apuntes de clase").assertIsDisplayed()
+    @Test fun cancelarNoCreaUnRegistro() {
+        abrir()
+        formulario()
+        compose.onNodeWithTag("titulo").performTextInput("No guardar esta tarea")
+        closeSoftKeyboard()
+        compose.onNodeWithText("Cancelar").performScrollTo().performClick()
+        esperar("6 de 6 recordatorios")
+        compose.onNodeWithText("No guardar esta tarea").assertDoesNotExist()
     }
 
-    @Test fun descripcionOpcionalTieneTextoAlternativo() {
-        compose.onNodeWithTag("lista").performScrollToNode(
-            androidx.compose.ui.test.hasTestTag("recordatorio_2"))
-        compose.onNodeWithText("Sin descripción").assertIsDisplayed()
+    @Test fun estadoVacioOfreceCrear() {
+        abrir("vacio")
+        esperar("Todavía no hay recordatorios.")
+        capturar("04_vacio.png")
+        compose.onNodeWithText("Crear recordatorio").performClick()
+        compose.onNodeWithTag("titulo").assertIsDisplayed()
     }
 
-    @Test fun filtrosSeConservanAlRecrearActividad() {
-        seleccionar("filtro_prioridad", "Baja")
-        compose.activityRule.scenario.recreate()
-        compose.onNodeWithText("2 de 6 recordatorios").assertIsDisplayed()
-        compose.onNodeWithTag("filtro_prioridad").assertIsDisplayed()
+    @Test fun errorDeCargaYReintento() {
+        abrir("error_carga")
+        esperar("No se pudo cargar la lista de recordatorios.")
+        capturar("05_error_carga.png")
+        compose.onNodeWithText("Reintentar").performClick()
+        compose.onNodeWithText("Cargando recordatorios…").assertExists()
+        esperar("6 de 6 recordatorios")
     }
 
-    private fun seleccionar(tag: String, texto: String) {
-        compose.onNodeWithTag(tag).performClick()
-        compose.onNodeWithText(texto).performClick()
+    @Test fun errorDeGuardadoConservaElFormularioYPermiteReintentar() {
+        abrir("error_guardado")
+        formulario()
+        compose.onNodeWithTag("titulo").performTextInput("Revisar presupuesto")
+        closeSoftKeyboard()
+        elegir("categoria", "Trabajo")
+        elegir("prioridad", "Alta")
+        compose.onNodeWithTag("guardar").performScrollTo().performClick()
+        esperar("No se pudo guardar el recordatorio. Inténtalo otra vez.")
+        compose.onNodeWithText("Revisar presupuesto").assertExists()
+        compose.onNodeWithTag("guardar").assertIsEnabled()
+        capturar("07_error_guardado.png")
+        compose.onNodeWithTag("guardar").performScrollTo().performClick()
+        esperar("7 de 7 recordatorios")
+    }
+
+    @Test fun filtrosYFormularioSobrevivenAlRecrearActividad() {
+        abrir()
+        esperar("6 de 6 recordatorios")
+        elegir("filtro_prioridad", "Alta")
+        esperar("2 de 6 recordatorios")
+        activity.recreate()
+        esperar("2 de 6 recordatorios")
+        formulario()
+        compose.onNodeWithTag("titulo").performTextInput("Consultar apuntes")
+        closeSoftKeyboard()
+        activity.recreate()
+        compose.onNodeWithText("Consultar apuntes").assertExists()
+        compose.onNodeWithTag("guardar").assertIsNotEnabled()
+    }
+
+    private fun abrir(escenario: String = "normal") {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        activity = ActivityScenario.launch(Intent(context, MainActivity::class.java).putExtra("escenario", escenario))
+    }
+
+    private fun formulario() {
+        esperar("Nuevo recordatorio")
+        compose.onNodeWithText("Nuevo recordatorio").performClick()
+        compose.onNodeWithTag("titulo").assertIsDisplayed()
+    }
+
+    private fun elegir(tag: String, opcion: String) {
+        compose.onNodeWithTag(tag).performScrollTo().performClick()
+        compose.onNodeWithText(opcion).performClick()
+    }
+
+    private fun esperar(texto: String) {
+        compose.waitUntil(6_000) { compose.onAllNodesWithText(texto).fetchSemanticsNodes().isNotEmpty() }
     }
 
     private fun capturar(nombre: String) {

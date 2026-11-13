@@ -1,20 +1,26 @@
 # Recordatorios
 
-Actividad 1 de Programación Mobile.
+Actividad 2 de Programación Mobile.
 
-Es una aplicación de recordatorios hecha con Kotlin y Jetpack Compose. Muestra una lista de tareas con su categoría, prioridad y estado. Se puede filtrar por prioridad o por tareas pendientes y completadas.
-
-Por ahora usa seis tareas de ejemplo que están en el código. Todavía no guarda los cambios ni se conecta a internet.
+La app muestra los recordatorios, permite agregar uno y abre el detalle al tocar una tarjeta. El formulario pide título, categoría y prioridad. La descripción es opcional. Los registros nuevos duran mientras la app está en memoria.
 
 ## Cómo abrirla
 
-Abrir la carpeta en Android Studio y esperar que termine la sincronización de Gradle. Se necesita el SDK de Android 36 y el JDK incluido en Android Studio. Después se elige un emulador o un teléfono y se ejecuta `app`.
+Abre la carpeta en Android Studio con el SDK 36 y el JDK incluido en el programa. Espera la sincronización de Gradle, selecciona un emulador o un teléfono y ejecuta el módulo `app`. El APK de pruebas puede instalarse junto a la versión de la Actividad 1.
 
-## Archivos principales
+## Cómo está organizada
 
-- `Recordatorio.kt`: los modelos y las validaciones.
-- `DatosSimulados.kt`: las tareas de ejemplo, las colecciones y los filtros.
-- `PantallaRecordatorios.kt`: la pantalla de la lista.
-- `MainActivity.kt`: el inicio de la aplicación.
+- `modelo` contiene los recordatorios, las categorías, las prioridades y los estados.
+- `datos` contiene los ejemplos y el repositorio en memoria.
+- `presentacion` contiene un ViewModel y un UiState por pantalla.
+- `ui` contiene las pantallas, los componentes compartidos y la navegación.
 
-También hay pruebas para las validaciones, los filtros y la pantalla. La aplicación se probó en un emulador con Android 16.
+La app parte en `lista`. El formulario está en `crear` y el detalle en `detalle/{id}`, donde `id` es el identificador numérico del recordatorio.
+
+## Probar los estados
+
+Con el APK debug instalado y un emulador seleccionado, puedes iniciar la app con `adb`. Cambia `vacio` por `error_carga` o `error_guardado` para simular un fallo en el primer intento. El siguiente intento funciona. Omite `--es escenario vacio` para abrir el listado normal.
+
+```powershell
+adb shell am start -S -n cl.curso.recordatorios.actividad2/cl.curso.recordatorios.MainActivity --es escenario vacio
+```
